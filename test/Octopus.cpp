@@ -30,11 +30,11 @@ void Octopus::Ik_Ccd(E_Leg & leg, Vector2 pos)
 
 void Octopus::Fk(E_Leg & leg, Vector2 pos)
 {
-	for (int j = joint; j >0; --j) {
-		auto v = leg.joint[j-1]-_oct.root;
+	for (int j = 0; j < joint; --j) {
+		auto v = leg.joint[j] - _oct.root;
 		auto p = pos - _oct.root;
 
-		
+
 
 	}
 	if (joint == leg.T) {
