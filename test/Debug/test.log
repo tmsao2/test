@@ -1,0 +1,8 @@
+﻿  Octopus.cpp
+d:\test\test\octopus.cpp(50): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+d:\test\test\octopus.cpp(82): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+d:\test\test\octopus.cpp(103): warning C4244: '引数': 'int' から 'const float' への変換です。データが失われる可能性があります。
+d:\test\test\octopus.cpp(107): warning C4244: '引数': 'int' から 'const float' への変換です。データが失われる可能性があります。
+d:\test\test\octopus.cpp(115): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+d:\test\test\octopus.cpp(128): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+  test.vcxproj -> D:\test\Debug\test.exe
