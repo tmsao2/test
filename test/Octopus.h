@@ -16,9 +16,10 @@ enum class E_LEG_STATE {
 struct E_Leg {
 	Vector2 tip;	//先端座標
 	std::vector<Vector2> joint;	//関節座標
-	const int T = 12;	//関節数
+	const int T = 4;	//関節数
 	E_LEG_STATE state;	//状態
 	int angle;		//目標までの角度
+	bool turnflag;	//回転方向:true...右,false...左
 };
 
 struct Oct {
@@ -36,7 +37,7 @@ private:
 	int angle;
 	int joint;
 	void Ik_Ccd(E_Leg& leg, Vector2 pos);
-	void Fk(E_Leg& leg, Vector2 pos);
+	void Fk(E_Leg& leg, float rad);
 	void OctInk(E_Leg& leg, Vector2 pos);
 	void Sweep(E_Leg& leg, Vector2 pos);
 	Oct _oct;
