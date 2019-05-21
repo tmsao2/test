@@ -15,11 +15,12 @@ enum class E_LEG_STATE {
 
 struct E_Leg {
 	Vector2 tip;	//先端座標
+	Vector2 vel;
 	std::vector<Vector2> joint;	//関節座標
+	std::vector<MATRIX> mat;	//関節ごとの回転角
 	const int T = 4;	//関節数
 	E_LEG_STATE state;	//状態
 	int angle;		//目標までの角度
-	bool turnflag;	//回転方向:true...右,false...左
 };
 
 struct Oct {
@@ -36,8 +37,10 @@ private:
 	int wait;
 	int angle;
 	int joint;
+	std::vector<int> test;
 	void Ik_Ccd(E_Leg& leg, Vector2 pos);
-	void Fk(E_Leg& leg, float rad);
+	void Fk(E_Leg& leg, Vector2 pos);
+	void LegTranslate(E_Leg& leg,int idx);
 	void OctInk(E_Leg& leg, Vector2 pos);
 	void Sweep(E_Leg& leg, Vector2 pos);
 	Oct _oct;

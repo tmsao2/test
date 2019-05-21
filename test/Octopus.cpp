@@ -4,7 +4,7 @@
 #include <random>
 
 const int length = 30;
-const int limit = 1;
+const int limit = 0;
 const int nodeSize = 6;
 const int width = 20;
 
@@ -20,35 +20,36 @@ void Octopus::Ik_Ccd(E_Leg & leg, Vector2 pos)
 			auto mat = MGetTranslate((-leg.joint[j - 1]).V_Cast());			//Œ´“_‚Ü‚ÅˆÚ“®
 			mat = MMult(mat, MGetRotVec2(t_vec.V_Cast(), p_vec.V_Cast()));	//‰ñ“]
 			mat = MMult(mat, MGetTranslate(leg.joint[j - 1].V_Cast()));		//Œ³‚ÌˆÊ’u‚ÉˆÚ“®
-			for (int itr = j; itr <= leg.T; ++itr) {
+			for (int itr = j; itr < leg.T; ++itr) {
 				leg.joint[itr] = VTransform(leg.joint[itr].V_Cast(), mat);
 			}
-			leg.tip = leg.joint[leg.T];
+			leg.tip = leg.joint[leg.T-1];
 		}
 	}
 }
 
-void Octopus::Fk(E_Leg & leg, float rad)
+void Octopus::Fk(E_Leg & leg, Vector2 pos)
 {
-	auto c = _oct.root.x + cos(rad)*_oct.r;
-	auto s = _oct.root.y + sin(rad)*_oct.r;
-	auto p_pos = Vector2(c, s);
-	auto v = leg.joint[0] - _oct.root;
-	auto p = p_pos - _oct.root;
-	auto mat = MGetTranslate((-_oct.root).V_Cast());
-	mat = MMult(mat, MGetRotVec2(v.V_Cast(), p.V_Cast()));
-	mat = MMult(mat, MGetTranslate(_oct.root.V_Cast()));
-	auto pos = leg.joint[0];
-	leg.joint[0] = VTransform(leg.joint[0].V_Cast(), mat);
-	auto vec = leg.joint[0] - pos;
-	for (int j = 1; j < leg.T; ++j) {
-		auto vec = leg.joint[0] - pos;
-		leg.joint[j] = Vector2(leg.joint[j].x + vec.x, leg.joint[j].y - vec.y);
+	for (int nj = leg.T - 1; nj >= 1; --nj) {
+		leg.mat[nj] = leg.mat[nj-1];
+		test[nj] = test[nj-1];
 	}
-	if (vec.Magnitude() > (_oct.r / leg.T)-10|| vec.Magnitude() < (_oct.r / leg.T)+10) {
-		for (int i = 0; i < leg.T-1; ++i) {
-			auto tmp = leg.joint[i+1] - leg.joint[i];
-			leg.joint[i+1] = leg.joint[i] + tmp.Normalized()*(_oct.r / leg.T);
+	for (int j = 1; j < joint; ++j) {
+		auto mat = MGetTranslate((-leg.joint[j-1]).V_Cast());
+		mat = MMult(mat, leg.mat[j]);
+		mat = MMult(mat, MGetTranslate(leg.joint[j-1].V_Cast()));
+		leg.joint[j] = VTransform(leg.joint[j].V_Cast(), mat);
+		
+		LegTranslate(leg, j);
+	}
+}
+
+void Octopus::LegTranslate(E_Leg & leg,int idx)
+{
+	for (int j = idx; j < leg.T-1; ++j) {
+		auto vec = leg.joint[j + 1] - leg.joint[j];
+		if (vec.Magnitude() > (_oct.r / leg.T) + 0.1f||(vec.Magnitude() < (_oct.r / leg.T) - 0.1f)) {
+			leg.joint[j + 1] = leg.joint[j] + vec.Normalized()*(_oct.r / leg.T);
 		}
 	}
 }
@@ -73,15 +74,18 @@ Octopus::Octopus()
 		auto s = sin(radian * i);
 		LEG(i).tip.x = _oct.root.x + c * _oct.r;
 		LEG(i).tip.y = _oct.root.y + s * _oct.r;
-		LEG(i).turnflag = true;
+		LEG(i).vel = Vector2(0,0);
+		LEG(i).mat.resize(LEG(i).T);
 		for (int j = 0; j < LEG(i).T; ++j) {
 			LEG(i).joint.push_back(_oct.root + Vector2(c, s)*(_oct.r / LEG(i).T*(j+1)));
 		}
 		LEG(i).state = E_LEG_STATE::NORMAL;
+		LEG(i).angle = GetRand((radian*_oct.legs.size()) / (2.0f*DX_PI_F)*360.0f) ;
 	}
-	joint = 0;
-	angle = 0;
+	angle = 120;
 	wait = 0;
+	joint = 0;
+	test.resize(4);
 }
 
 
@@ -91,13 +95,10 @@ Octopus::~Octopus()
 
 void Octopus::Update(Vector2 pos)
 {
-	if (++wait>limit) {
+	if (++wait >= limit) {
+		Move(_oct, nodeSize, pos, 6);
 		wait = 0;
 	}
-	++angle;
-	++joint;
-	Move(_oct, nodeSize, pos, 6);
-
 }
 
 void Octopus::Draw()
@@ -127,6 +128,11 @@ void Octopus::Draw()
 	}
 	/*DrawOval(_oct.center.x , _oct.center.y , 50, 25, 0xaa0000, true);
 	DrawOval(_oct.center.x , _oct.center.y, 50, 25, 0x111111, false);*/
+	int cnt = 0;
+	for (auto t : test) {
+		DrawFormatString(10*cnt, 0, 0xff0000, "%d", t);
+		++cnt;
+	}
 }
 
 void Octopus::Move(Oct oct, int effector, Vector2 target, int numMaxIteration)
@@ -135,22 +141,32 @@ void Octopus::Move(Oct oct, int effector, Vector2 target, int numMaxIteration)
 	for (int i = 0; i < _oct.legs.size(); ++i) {
 		
 		if (LEG(i).state == E_LEG_STATE::NORMAL) {
-			if (LEG(i).angle == 0) {
-				LEG(i).angle = 360;
-			}
 			auto radian = 2.0f * DX_PI_F / (float)_oct.legs.size();
 			auto rad = radian * i;
+			joint = (++joint % LEG(i).T);
 
-			auto ang = abs(angle % LEG(i).angle - LEG(i).angle / 2) - LEG(i).angle / 4;
-			if (ang == LEG(i).angle / 2) {
-				LEG(i).turnflag = true;
-			}
-			if (ang == 0) {
-				LEG(i).turnflag = false;
-			}
+			auto ang = abs(++LEG(i).angle % angle - angle / 2);
+
 			rad = rad + DX_PI_F / 180 * ang;
-			
-			Fk(LEG(i), rad);
+			auto c = _oct.root.x + cos(rad)*_oct.r;
+			auto s = _oct.root.y + sin(rad)*_oct.r;
+			auto p_pos = Vector2(c, s);
+			auto v = LEG(i).joint[0] - _oct.root;
+			auto p = p_pos - _oct.root;
+			auto mat = MGetTranslate((-_oct.root).V_Cast());
+			mat = MMult(mat, MGetRotVec2(v.V_Cast(), p.V_Cast()));
+			mat = MMult(mat, MGetTranslate(_oct.root.V_Cast()));
+
+
+			LEG(i).joint[0] = VTransform(LEG(i).joint[0].V_Cast(), mat);
+
+			LegTranslate(LEG(i),0);
+
+			Fk(LEG(i), p_pos);
+
+			LEG(i).mat[0] = MGetRotVec2(v.V_Cast(), p.V_Cast());
+			test[0] = joint;
+
 		}
 		if (LEG(i).state == E_LEG_STATE::PUNCH) {
 
